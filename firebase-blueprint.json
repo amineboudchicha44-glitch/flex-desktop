@@ -1,0 +1,202 @@
+{
+  "entities": {
+    "UserSettings": {
+      "title": "UserSettings",
+      "description": "Synced launcher theme, accessibility preferences, and pinned shelf apps for a user across all connected devices.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the user."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "User display name from Google Sign-In."
+        },
+        "email": {
+          "type": "string",
+          "description": "User email address from Google Sign-In."
+        },
+        "themeMode": {
+          "type": "string",
+          "enum": ["system", "dark", "light", "amoled"],
+          "description": "Customizable theme mode."
+        },
+        "accentPalette": {
+          "type": "string",
+          "enum": ["chrome_blue", "aurora_mint", "amber_dusk", "rose_quartz", "slate_mono"],
+          "description": "Selected Material 3 accent palette."
+        },
+        "fontScale": {
+          "type": "number",
+          "description": "Accessibility typography scale multiplier (0.85 to 1.40)."
+        },
+        "reduceMotion": {
+          "type": "boolean",
+          "description": "Accessibility and low-end hardware flag to minimize animations."
+        },
+        "highContrast": {
+          "type": "boolean",
+          "description": "Accessibility flag for high-contrast borders and surfaces."
+        },
+        "largeTargets": {
+          "type": "boolean",
+          "description": "Accessibility flag for larger touch and pointer targets."
+        },
+        "liteMode": {
+          "type": "boolean",
+          "description": "Memory-efficient performance mode for low-end Chromebooks and Android devices."
+        },
+        "pinnedApps": {
+          "type": "string",
+          "description": "Bounded list of up to 20 pinned app identifiers on the taskbar shelf."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp written with FieldValue.serverTimestamp()."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp written with FieldValue.serverTimestamp()."
+        }
+      },
+      "required": [
+        "userId",
+        "themeMode",
+        "accentPalette",
+        "fontScale",
+        "reduceMotion",
+        "highContrast",
+        "largeTargets",
+        "liteMode",
+        "pinnedApps",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "WorkspaceDocument": {
+      "title": "WorkspaceDocument",
+      "description": "Offline-first productivity note or document with real-time auto-save and cross-device sync.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the document owner."
+        },
+        "title": {
+          "type": "string",
+          "description": "Document title."
+        },
+        "content": {
+          "type": "string",
+          "description": "Document body content."
+        },
+        "category": {
+          "type": "string",
+          "description": "Document category label (e.g., Notes, Tasks, Research, Scratchpad)."
+        },
+        "isPinned": {
+          "type": "boolean",
+          "description": "Whether the document is pinned in the launcher Continue strip."
+        },
+        "wordCount": {
+          "type": "integer",
+          "description": "Word count of the document."
+        },
+        "lastEditedDevice": {
+          "type": "string",
+          "description": "Device model name that last edited this document."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp written with FieldValue.serverTimestamp()."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last auto-save timestamp written with FieldValue.serverTimestamp()."
+        }
+      },
+      "required": [
+        "userId",
+        "title",
+        "content",
+        "category",
+        "isPinned",
+        "wordCount",
+        "lastEditedDevice",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "ConnectedDevice": {
+      "title": "ConnectedDevice",
+      "description": "Registered user device (Chromebook or Android) synchronized with this workspace account.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the device owner."
+        },
+        "deviceName": {
+          "type": "string",
+          "description": "Human-readable device model name."
+        },
+        "manufacturer": {
+          "type": "string",
+          "description": "Device manufacturer."
+        },
+        "formFactor": {
+          "type": "string",
+          "enum": ["phone", "tablet", "chromebook"],
+          "description": "Detected device form factor."
+        },
+        "osVersion": {
+          "type": "string",
+          "description": "Android/ChromeOS release version."
+        },
+        "isLowRamDevice": {
+          "type": "boolean",
+          "description": "Whether hardware reports low-RAM optimization profile."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "First registration timestamp written with FieldValue.serverTimestamp()."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last heartbeat sync timestamp written with FieldValue.serverTimestamp()."
+        }
+      },
+      "required": [
+        "userId",
+        "deviceName",
+        "manufacturer",
+        "formFactor",
+        "osVersion",
+        "isLowRamDevice",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserSettings" },
+      "description": "Per-user launcher preferences, accessibility controls, and shelf pins."
+    },
+    "/users/{userId}/documents/{docId}": {
+      "schema": { "$ref": "#/entities/WorkspaceDocument" },
+      "description": "User-owned productivity documents with auto-save and offline sync."
+    },
+    "/users/{userId}/devices/{deviceId}": {
+      "schema": { "$ref": "#/entities/ConnectedDevice" },
+      "description": "Connected Android and Chromebook devices synced under the user's account."
+    }
+  }
+}

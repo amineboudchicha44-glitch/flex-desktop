@@ -1,0 +1,6 @@
+{
+  "name": "FlexDesk",
+  "description": "ChromeOS-inspired adaptive launcher, taskbar shelf, control center, and offline-first workspace synced across Android and Chromebook devices.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

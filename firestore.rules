@@ -1,0 +1,172 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidTimestamp(ts) {
+      return ts is timestamp && ts <= request.time;
+    }
+
+    function isValidUserSettings(data, userId) {
+      return data.userId is string &&
+             data.userId == userId &&
+             data.themeMode in ['system', 'dark', 'light', 'amoled'] &&
+             data.accentPalette in ['chrome_blue', 'aurora_mint', 'amber_dusk', 'rose_quartz', 'slate_mono'] &&
+             data.fontScale is number && data.fontScale >= 0.8 && data.fontScale <= 1.5 &&
+             data.reduceMotion is bool &&
+             data.highContrast is bool &&
+             data.largeTargets is bool &&
+             data.liteMode is bool &&
+             data.pinnedApps is list &&
+             data.pinnedApps.size() <= 20 &&
+             (data.pinnedApps.size() == 0 || data.pinnedApps[0] is string) &&
+             (!('displayName' in data) || data.displayName == null || (data.displayName is string && data.displayName.size() <= 100)) &&
+             (!('email' in data) || data.email == null || (data.email is string && data.email.size() <= 160)) &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidWorkspaceDocument(data, userId) {
+      return data.userId is string &&
+             data.userId == userId &&
+             data.title is string && data.title.size() <= 200 &&
+             data.content is string && data.content.size() <= 100000 &&
+             data.category is string && data.category.size() >= 1 && data.category.size() <= 40 &&
+             data.isPinned is bool &&
+             data.wordCount is int && data.wordCount >= 0 && data.wordCount <= 50000 &&
+             data.lastEditedDevice is string && data.lastEditedDevice.size() >= 1 && data.lastEditedDevice.size() <= 80 &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidConnectedDevice(data, userId) {
+      return data.userId is string &&
+             data.userId == userId &&
+             data.deviceName is string && data.deviceName.size() >= 1 && data.deviceName.size() <= 80 &&
+             data.manufacturer is string && data.manufacturer.size() <= 60 &&
+             data.formFactor in ['phone', 'tablet', 'chromebook'] &&
+             data.osVersion is string && data.osVersion.size() <= 40 &&
+             data.isLowRamDevice is bool &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow list: if isOwner(userId);
+
+      allow create: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       incoming().keys().hasAll([
+                         'userId', 'themeMode', 'accentPalette', 'fontScale',
+                         'reduceMotion', 'highContrast', 'largeTargets', 'liteMode',
+                         'pinnedApps', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'displayName', 'email', 'themeMode', 'accentPalette',
+                         'fontScale', 'reduceMotion', 'highContrast', 'largeTargets',
+                         'liteMode', 'pinnedApps', 'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidUserSettings(incoming(), userId);
+
+      allow update: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       isValidUserSettings(incoming(), userId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'displayName', 'email', 'themeMode', 'accentPalette',
+                         'fontScale', 'reduceMotion', 'highContrast', 'largeTargets',
+                         'liteMode', 'pinnedApps', 'updatedAt'
+                       ]);
+
+      allow delete: if isOwner(userId) && isValidId(userId);
+
+      match /documents/{docId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(docId);
+        allow list: if isOwner(userId) && isValidId(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(userId) &&
+                         isValidId(docId) &&
+                         incoming().keys().hasAll([
+                           'userId', 'title', 'content', 'category', 'isPinned',
+                           'wordCount', 'lastEditedDevice', 'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'title', 'content', 'category', 'isPinned',
+                           'wordCount', 'lastEditedDevice', 'createdAt', 'updatedAt'
+                         ]) &&
+                         isValidWorkspaceDocument(incoming(), userId);
+
+        allow update: if isOwner(userId) &&
+                         isValidId(userId) &&
+                         isValidId(docId) &&
+                         isValidWorkspaceDocument(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'title', 'content', 'category', 'isPinned',
+                           'wordCount', 'lastEditedDevice', 'updatedAt'
+                         ]);
+
+        allow delete: if isOwner(userId) && isValidId(userId) && isValidId(docId);
+      }
+
+      match /devices/{deviceId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(deviceId);
+        allow list: if isOwner(userId) && isValidId(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(userId) &&
+                         isValidId(deviceId) &&
+                         incoming().keys().hasAll([
+                           'userId', 'deviceName', 'manufacturer', 'formFactor',
+                           'osVersion', 'isLowRamDevice', 'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'deviceName', 'manufacturer', 'formFactor',
+                           'osVersion', 'isLowRamDevice', 'createdAt', 'updatedAt'
+                         ]) &&
+                         isValidConnectedDevice(incoming(), userId);
+
+        allow update: if isOwner(userId) &&
+                         isValidId(userId) &&
+                         isValidId(deviceId) &&
+                         isValidConnectedDevice(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'deviceName', 'manufacturer', 'formFactor',
+                           'osVersion', 'isLowRamDevice', 'updatedAt'
+                         ]);
+
+        allow delete: if isOwner(userId) && isValidId(userId) && isValidId(deviceId);
+      }
+    }
+  }
+}
